@@ -1,0 +1,15 @@
+      进程隐藏原理实现：通过HOOKAPI ZwQuerySystemInformation可以实现进程隐藏。这是因为EnumProcess或者CreateToolHelp32Snapshot遍历进程,都是通过ZwQuerySystemInformation函数来检索系统进程信息的。
+      内联HOOK或者IAT HOOK获取ZwQuerySystemInformation函数地址；根据32位或64位版本,计算偏移,修改函数前xx字节数据；先修改页属性,再修好内存数据,恢复页属性； 在My_ZwQuerySystemInformation函数中判断是否检索要隐藏进程,若是隐藏进程,遍历检索结果,剔除隐藏进程的信息,将修改数据返回。
+
+补充：
+x86系统	修改前5字节
+	HOOK前:	0x41000  E8 007f00000  call OpenProcess
+	HOOK后: 0x41000  E9 000410000  call MyOpenProcess
+	填充地址计算公式: 跳转偏移 = 目标地址 - 指令所在 - 5
+	
+x64系统 修改前12字节
+	mov rax,目标地址	0x48 0xb8 00000000
+       跳转方式1:	push rax	0x50
+		   ret		   0xC3
+       跳转方式2:  jmp rax		0xff  0xe0
+	
